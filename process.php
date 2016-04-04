@@ -4,6 +4,8 @@
 include('config_mysql_learn.php');
 include('teacher.php');
 
+//var_dump($_SERVER);
+
 extract($_POST);
 if(!isset($action))
 {
@@ -48,8 +50,8 @@ if(strtoupper($action) == "GETPERSONNEL")
 	
 	$sql = "select * from schoollms_schema_userdata_access_profile
 		where
-		  type_id = $type_id";
-	
+		  type_id = $type_id and school_id = $school_id";
+	//echo $sql;
 	$data->execSQL($sql);
 	$result = array();
 	while($row = $data->getRow())
@@ -77,8 +79,8 @@ if(strtoupper($action) == "GETPERSONNEL2")
 		join schoollms_schema_userdata_school_classes sc on sc.class_id = sd.class_id
 		join schoollms_schema_userdata_access_profile ap on ap.user_id = sd.user_id
 		where
-		  type_id = $type_id and sg.grade_id = $grade_id and sd.year_id = $year_id";
-		  //echo $sql;
+		  type_id = $type_id and sg.grade_id = $grade_id and sd.year_id = $year_id and ap.school_id = $school_id ";
+	//echo $sql;
 	$data->execSQL($sql);
 	
 	$result = array();
@@ -93,7 +95,7 @@ if(strtoupper($action) == "GETPERSONNEL2")
 		join schoollms_schema_userdata_school_classes sc on sc.class_id = sd.class_id
 		join schoollms_schema_userdata_access_profile ap on ap.user_id = sd.user_id
 		where
-		  type_id = $type_id and sg.grade_id = $grade_id and sd.year_id = $year_id order by $sort $order limit $offset,$rows";
+		  type_id = $type_id and sg.grade_id = $grade_id and sd.year_id = $year_id  and ap.school_id = $school_id  order by $sort $order limit $offset,$rows";
 		  // and sg.grade_id  <= $end_grade_id 
 	$data->execSQL($sql);
 	//echo $sql;
@@ -203,7 +205,7 @@ if(strtoupper($action) == "GETVENUES")
 
 if(strtoupper($action) == "GETCLASSES")
 {
-	$sql = "select * from schoollms_schema_userdata_school_classes";
+	$sql = "select * from schoollms_schema_userdata_school_classes where school_id = $school_id";
 	$data->execSQL($sql);
 	$result = array();
 	
@@ -274,18 +276,55 @@ if(strtoupper( $action) == "GETSLOTCLASSLIST" )
 
 if(strtoupper( $action) == "TIMETABLESELECT" )
 {
+	$sql = "select *
+	from schoollms_schema_userdata_timetable_settings
+	where school_id = $school_id";
+	//echo $sql;
+	$data->execSQL($sql);
+	$settings = "";
+	if($row=$data->getRow())
+	{
+		$settings = $row->settings;
+	}		
+	$settarray =explodetoAssoc($settings);
+	
+	$sql = "select *, replace(grade_title,'Grade','Class') theclass
+		from schoollms_schema_userdata_school_grades
+		where grade_id = '$timetable_label'";
+	$classname = "";
+	$data->execSQL($sql);	
+	if($row=$data->getRow())
+	{		
+		$classname = $row->theclass;
+	}		
+	//echo $classname;
+	
+	$set = explode(",",$settarray["classletters"]);
+	$in = "(''";
+	foreach($set as $value)
+	{
+		//$val = str_replace(" ","","$classname$value");
+		$val = str_replace("<br>","",trim("$classname$value"));
+		$val = str_replace("\n","",$val );
+		$val = str_replace("\r","",$val );
+		$in .= ",'$val'";
+	}
+	$in .= ")";
+	
+	
 	$sql = "select * from schoollms_schema_userdata_school_timetable where school_id = $school_id ";
 	if(isset($timetable_label))
 	{
-		if($timetable_label != 0)
+		/*if($timetable_label != 0)
 		{
 			$sql .= " and timetable_label like '%$timetable_label%'";
 
-		}
+		}*/
+		$sql .= " and timetable_label in $in";
 		$sql .= " order by timetable_label";
-	}
-	
+	}	
 	//echo "$sql";
+	//die();
 	//$result = array();
 	$data->execSQL($sql);
 	$result = array();
@@ -431,21 +470,11 @@ if(strtoupper($action) == "GETSUBJECTTEACHER")
 
 if(strtoupper($action) == "GETCLASSLIST")
 {
-    $q = "SELECT timetable_type_item_id FROM schoollms_schema_userdata_school_timetable WHERE school_id = $school_id AND timetabl_id = $timetable_id AND timetable_type_id = 3";
-    $data->execSQL($q);
-                        
-    while($row = $data->getRow())
-   {
-	  $class_id = $row->timetable_type_item_id;
-   }    
-    
-       
-   //echo "CLASS ID $class_id Q $q<br>";
-    
-    $sql = "select *
+	$sql = "select *
    from schoollms_schema_userdata_learner_schooldetails sd
    join schoollms_schema_userdata_access_profile p on p.user_id = sd.user_id
-   where sd.class_id = $class_id and year_id = case when $year_id = 'All' then year_id else $year_id  end order by p.surname asc";
+   where sd.class_id = $class_id and year_id = case when $year_id = 'All' then year_id else $year_id  end ";
+   echo $sql;
    $data->execSQL($sql);
    $result = array();
    while($row = $data->getRow())
@@ -453,8 +482,7 @@ if(strtoupper($action) == "GETCLASSLIST")
 	   $result[] = $row;
    }
    
-   echo json_encode($result);
-   
+   echo json_encode($result);   
 }
 
 if(strtoupper($action) == "GETIMAGE")
@@ -539,7 +567,14 @@ if(strtoupper($action) == "GETROOMS")
 
 if(strtoupper($action) == "GETPERIODS")
 {
-	$sql = "select * from schoollms_schema_userdata_school_timetable_period";
+	$sql = "select * from schoollms_schema_userdata_school_timetable_period
+	where sChoOl_Id = $school_id";
+	$sql = "select l.* ,period_start, period_end
+	from schoollms_schema_userdata_school_timetable_period_labels l
+	join schoollms_schema_userdata_school_timetable_period p on p.period_label_id = l.period_label_id and l.school_id = p.school_id
+	where l.school_id = $school_id
+	and week_day_id = 7
+	order by UNIX_TIMESTAMP(concat('2016-01-01',' ',period_start))  asc";
 	$data->execSQL($sql);
 	$result = array();
 	while($row = $data->getRow())
@@ -661,6 +696,27 @@ function tokenize($value,$year_id =0)
 	
 }
 
+function explodetoAssoc($variable,$explodeby = "|",$assocdelimiter= "=") 
+{ 
+    //echo "$variable is the variable ";
+	$list = explode($explodeby,$variable); 
+	
+	foreach($list as $key=>$value)
+	{
+		$data = explode($assocdelimiter,$value); 
+		$result[$data[0]] = $data[1]; 
+	}
+	/*$result = array(); 
+	for($i=0;$i< count($list);$i++) 
+	{ 
+		var_dump($list);
+		$data = explode(@assocdelimiter,$list[$i]); 
+		$result[$data[0]] = $data[1]; 
+	} */
+	//var_dump($result["classletters"]);
+	//echo "<hr/>";
+	return $result; 
+}
 
 
 
