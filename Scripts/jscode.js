@@ -79,7 +79,7 @@ function getStep1Data()
 				var params = "school_id="+school_id+"&year_id="+$("#teachertimetable_year_id").val()+"&grade_id="+$("#teachertimetable_grade_id").val();
 				params = params + "&class_id="+$("#timetable_id").val() + "&subject_id="+$("#subjectselect").val()+"&classroom="+$("#venueSelect").val();
 				params = params +"&period_time="+$('#periodColumnVal').html()+"&teacher="+teacher+"&teacher_id="+teacher_id+"&day="+day+"&save_type=admin_timetable_slot";
-				alert(params);
+				//alert(params);
 				sendDataByGet(param,"timetable_save.php");
 			}
 			else{
@@ -108,7 +108,9 @@ function getStep1Data()
 				//alert(times);
 				subject = subject.replace('<b>','');
 				subject = subject.replace('</b>','');
-				window.open("classlist.php?class="+slotClass+"&subject="+subject+"&timeslot="+times,'1453910749489','width=700,height=500,toolbar=0,menubar=0,location=0,status=1,scrollbars=1,resizable=1,left=0,top=0');
+				var school_id = getSchoolID();
+				//alert(times);
+				window.open("classlist.php?class="+slotClass+"&subject="+subject+"&timeslot="+times+"&year_id="+$("#teachertimetable_year_id").val()+"&school_id="+school_id,'1453910749489','width=700,height=500,toolbar=0,menubar=0,location=0,status=1,scrollbars=1,resizable=1,left=0,top=0');
 				return;
 				
 				var classlist = getJasonData("action=GETSLOTCLASSLIST&class="+slotClass);
@@ -177,11 +179,12 @@ function getStep1Data()
 				mytimes[1] = mytimes[1].replace('<b>','');
 				mytimes[1] = mytimes[1].replace('</b>','');
 				var theday = mytimes[1].split("<br>");
+				var selectedPeriod = mytimes[2];
 				
 				var days = getJasonData("action=TIMETABLEDAYS");
 				days = jQuery.parseJSON(days);
 				//alert(days);
-				//alert(times);
+				alert(times);
 				var myDays = "<select id='day' name='day' disabled='true'>";
 				//alert(mytimes[2]);
 				$.each(days, function(i, item) {
@@ -205,10 +208,28 @@ function getStep1Data()
 				});
 				
 				theRooms = theRooms+ "</select>";
+				var school_id = getSchoolID();
+				var periods = getJasonData("action=GETPERIODS&school_id="+school_id);
+				//alert(periods);
+				periods = jQuery.parseJSON(periods);
+				var thePeriods = "<select id='period_label_id' name='period_label_id' disabled='true' >";
+				$.each(periods, function(i, item) {
+					if(selectedPeriod == periods[i].period_label)
+					{
+						thePeriods = thePeriods +  "<option value='"+periods[i].period_label_id+"' selected>"+periods[i].period_label+"</option>";
+					}
+					else{
+						thePeriods = thePeriods +  "<option value='"+periods[i].period_label_id+"' >"+periods[i].period_label+"</option>";
+					}
+				});
+				
+				thePeriods = thePeriods+ "</select>";
+				//alert('Aha');
 				
 				var table = "<table><tr><td>Subject</td><td>:SUBJECTS</td></tr><tr><td>Teacher List</td><td id='teachers' name='teachers' >:TEACHER</td></tr><tr>";
 				table = table + "</tr><tr><td>Day</td><td>:DAYS</td></tr>";
-				//table = table + "<tr><td>Start Time</td><td id='starttime' name='starttime'>:STARTTIME</select></td></tr><tr><td>End Time</td><td id='endtime' name='endtime'>";
+				table = table + "<tr><td>Period</td><td id='starttime' name='starttime'>:STARTTIME</select></td></tr>";
+				//table = table + "<tr><td>End Time</td><td id='endtime' name='endtime'>";
 				//table = table + ":ENDTIME</td></tr><tr></tr>";
 				table = table + "<tr><td>Room</td><td>:ROOM</td></tr>";
 				table = table + "<tr><td><input type='button' value='Save' name='btnSaveTimeTableSlot' id='btnSaveTimeTableSlot' onClick='saveTimeTableSlot()' /></td>";
@@ -217,8 +238,9 @@ function getStep1Data()
 				
 				table = table.replace(":SUBJECTS",subselect);
 				table = table.replace(":TEACHER",teacherSelect);
-				table = table.replace(":STARTTIME",periodtimes[0]);
-				table = table.replace(":ENDTIME",periodtimes[1]);
+				//table = table.replace(":STARTTIME",periodtimes[0]);
+				//table = table.replace(":ENDTIME",periodtimes[1]);
+				table = table.replace(":STARTTIME",thePeriods);
 				table = table.replace(":DAYS",myDays);	
 				table = table.replace(":ROOM",theRooms);				
 				
@@ -237,20 +259,33 @@ function getStep1Data()
 			//alert('Day ID '+ $("#day").val());
 			//alert('starttime '+ $("#starttime").html());
 			//alert('endtime '+ $("#endtime").html());
-			var param = "subject_id="+$("#subjectselect").val()+"&teacher_id="+ $("#teacherlist").val()+"&day_id="+$("#day").val();
-			param =param + "&start_time="+$("#starttime").html()+"&endtime="+$("#endtime").html()+"&timetable_id="+$("#timetable_id").val();
+			/*var param = "subject_id="+$("#subjectselect").val()+"&teacher_id="+ $("#teacherlist").val()+"&day_id="+$("#day").val();
+			param =param + "&period_label_id="+$("#period_label_id").val()+"&endtime="+$("#endtime").html()+"&timetable_id="+$("#timetable_id").val();
+			param = param + "&year_id="+$("#teachertimetable_year_id").val()+"&grade_id="+$("#teachertimetable_grade_id").val();
+			param = param + "&room_id="+$("#room").val()+"&save_type=save_timetable_slot";
+			//param = param + "&timetable_teacher_id="+$("#teacher_list").val();
+			//param = param + "&timetable_learner_id="+$("#class_list").val();
+			param = param + "&timetable_user_id="+($("#teacher_list").val() == 0?$("#class_list").val():$("#teacher_list").val());*/
+			var teacher_id = $("#teacherlist").val();
+			if(teacher_id == undefined || teacher_id == "undefined")
+			{
+				teacher_id = 0;
+			}
+			var param = "subject_id="+$("#subjectselect").val()+"&teacher_id="+ teacher_id+"&day_id="+$("#day").val();
+			param =param + "&period_label_id="+$("#period_label_id").val()+"&timetable_id="+$("#timetable_id").val();
 			param = param + "&year_id="+$("#teachertimetable_year_id").val()+"&grade_id="+$("#teachertimetable_grade_id").val();
 			param = param + "&room_id="+$("#room").val()+"&save_type=save_timetable_slot";
 			//param = param + "&timetable_teacher_id="+$("#teacher_list").val();
 			//param = param + "&timetable_learner_id="+$("#class_list").val();
 			param = param + "&timetable_user_id="+($("#teacher_list").val() == 0?$("#class_list").val():$("#teacher_list").val());
+			
 			var school_id = getUrlParameter("school_id");
 			if(school_id == undefined || school_id == "undefined")
 			{
 				school_id = $("#schools").val();
 			}			
 			param = param + "&school_id="+school_id;
-			alert("WTF 1 : "+ param);
+			alert(param);
 			sendDataByGet(param,'timetable_save.php');
 			getTimetable($("#timetable_id").val());
 			getClassList($("#timetable_id").val());
@@ -284,7 +319,6 @@ function getStep1Data()
 				teacherSelect = teacherSelect + "<option value='"+item.user_id+"'>"+name+"</option>";			
 			});
 			teacherSelect = teacherSelect + "</select>";
-			
 			var days = getJasonData("action=TIMETABLEDAYS");
 			days = jQuery.parseJSON(days);
 			var myDays = "<select id='day' name='day'>";
@@ -299,11 +333,11 @@ function getStep1Data()
 				theRooms = theRooms +  "<option value='"+rooms[i].room_id+"' >"+rooms[i].room_label+"</option>";
 			});
 			theRooms = theRooms+ "</select>";
-			alert("Here");
+			
 			var periods = getJasonData("action=GETPERIODS&school_id="+school_id);
-			alert(periods);
+			//alert(periods);
 			periods = jQuery.parseJSON(periods);
-			var thePeriods = "<select id='period_id' name='period_id'>";
+			var thePeriods = "<select id='period_label_id' name='period_label_id'>";
 			$.each(periods, function(i, item) {
 				thePeriods = thePeriods +  "<option value='"+periods[i].period_label_id+"' >"+periods[i].period_label+"</option>";
 			});
@@ -312,7 +346,6 @@ function getStep1Data()
 			
 			var startHour = "<select name='starthour' id='starthour'>";
 			var endHour = "<select name='endhour' id='endhour'>";
-			
 			for(i=1;i<=24;i++)
 			{
 				var z =i;
@@ -369,8 +402,13 @@ function getStep1Data()
 		
 		function addTimeTableSlot()
 		{
-			var param = "subject_id="+$("#subjectselect").val()+"&teacher_id="+ $("#teacherlist").val()+"&day_id="+$("#day").val();
-			param =param + "&period_id="+$("#period_id").val()+"&timetable_id="+$("#timetable_id").val();
+			var teacher_id =  $("#teacherlist").val();
+			if( $("#teacherlist").val() == undefined ||  $("#teacherlist").val() == "undefined")
+			{
+				teacher_id = "0";
+			}
+			var param = "subject_id="+$("#subjectselect").val()+"&teacher_id="+ teacher_id +"&day_id="+$("#day").val();
+			param =param + "&period_label_id="+$("#period_label_id").val()+"&timetable_id="+$("#timetable_id").val();
 			param = param + "&year_id="+$("#teachertimetable_year_id").val()+"&grade_id="+$("#teachertimetable_grade_id").val();
 			param = param + "&room_id="+$("#room").val()+"&save_type=save_timetable_slot";
 			//param = param + "&timetable_teacher_id="+$("#teacher_list").val();
@@ -409,16 +447,14 @@ function getStep1Data()
 			if(user_id == null || user_id == undefined)
 			{
 				params = "action=PRINT_DAYS&id="+timetableID+"&user_type="+user_type+"&year_id="+year_id+"&user_id=0"+"&school_id="+school_id;
-				//alert(params);
-				timetable = getJasonData(params);
+				
 			}
 			else{
 				//alert(user_id);
-				params = "action=PRINT_DAYS&id="+timetableID+"&user_type="+user_type+"&user_id="+user_id+"&year_id="+year_id+"&school_id="+school_id;
-				//alert(params);
-				timetable = getJasonData(params);
+				params = "action=PRINT_DAYS&id="+timetableID+"&user_type="+user_type+"&user_id="+user_id+"&year_id="+year_id+"&school_id="+school_id;				
 			}
 			alert(params);
+			timetable = getJasonData(params);
 			$("#timetable").html(timetable);
 		}
 		
@@ -542,7 +578,7 @@ function next()
 	var tab = $('#tabs').tabs('getSelected');
 	var index = $('#tabs').tabs('getTabIndex', tab);            
 	var indx = index + 1;
-	//alert(indx);
+	//lert(indx);
 	if($('#tabs').tabs('exists', indx))
 	{
 		$('#tabs').tabs('enableTab', indx);
@@ -656,10 +692,14 @@ function getSchoolData(school_id)
 		$("#"+data[0]).val(data[1]);
 		$("#school_id").val(school_id);
 	});
-	from_grade = parseInt(from_grade);
-	if(typeof from_grade == "string")
+	
+	if(typeof from_grade == "string" && from_grade == "R")
 	{
+		//alert("from Grade " +from_grade);
 		from_grade = 0;
+	}
+	else{
+		from_grade = parseInt(from_grade);
 	}
 	//alert(from_grade);
 	to_grade = parseInt(to_grade);
@@ -692,7 +732,7 @@ function getSchoolData(school_id)
 
 function saveSettings1()
 {
-	alert($("#from_grade").val() );
+	//alert($("#from_grade").val() );
 	//alert($("#to_grade").val() );
 	
 	var school_id = getUrlParameter("school_id");
@@ -720,7 +760,7 @@ function saveSettings1()
 			school_id = $("#schools").val();
 		}		
 		param = param + "&school_id="+school_id;
-		alert(param);
+		//alert(param);
 		sendDataByGet(param,"timetable_settings_save.php");
 		getSchoolData(school_id);
 	}
@@ -745,7 +785,7 @@ function saveSubjectSettings()
 	}
 	//var value = $("#frmSubjectSetting").serialize()+"&school_id="+school_id+ "&grade_id="+$("#grade_id").val();
 	var value = $("#frmSubjectSetting").serialize()+"&school_id="+school_id+ "&grade_id="+grade;
-	alert(value);
+	//alert(value);
 	sendDataByGet(value,"timetable_subject_settings_save.php");
 	getSchoolData(school_id);
 }
@@ -1034,7 +1074,7 @@ function SaveClassSetting()
 		}
 		var room_id = rows[classSettings[i]].room_id;
 		params = params+ "&room_id="+room_id;
-		alert(params);
+		//alert(params);
 		sendDataByGet(params,"timetable_class_settings_save.php");
 	}
 	//alert(whorotates);
@@ -1050,7 +1090,7 @@ function viewTimeTable(timetable_label)
 {
 	var user_type = getUrlParameter("user_type");
 	
-	//alert(timetable_label);
+	//lert(timetable_label);
 	 
 	if(timetable_label == undefined || timetable_label == "undefined")
 	{
@@ -1061,9 +1101,10 @@ function viewTimeTable(timetable_label)
 	{
 		school_id = $("#schools").val();
 	}
-	alert("action=TIMETABLESELECT&school_id="+school_id+"&user_type="+user_type+"&timetable_label="+timetable_label);
+	//alert($("#_classletters").html());
+	//alert("action=TIMETABLESELECT&school_id="+school_id+"&user_type="+user_type+"&timetable_label="+timetable_label);
 	var timetableid = getJasonData("action=TIMETABLESELECT&school_id="+school_id+"&user_type="+user_type+"&timetable_label="+timetable_label);
-	alert(timetableid);
+	//alert(timetableid);
 	timetableid =  jQuery.parseJSON(timetableid);
 	$('#timetable_id').html("");
 	$.each(timetableid, function(i, item) {
@@ -1109,7 +1150,7 @@ function addStudentsSetup()
 	//alert(fromto);
 	var data = fromto.split(" to ");
 	var start = parseInt(data[0]);
-	if(typeof data[0] == "string" && start == "R")
+	if(typeof data[0] == "string" || data[0] == "R")
 	{
 		start = "0";
 	}
@@ -1237,8 +1278,7 @@ function getClassList(class_id)
 	{
 		school_id = $("#schools").val();
 	}	
-	var classes = getJasonData("action=GETCLASSLIST&class_id="+class_id+"&year_id="+$("#teachertimetable_year_id").val()+"&school_id="+school_id);
-	alert("action=GETCLASSLIST&class_id="+class_id+"&year_id="+$("#teachertimetable_year_id").val()+"&school_id="+school_id);
+	var classes = getJasonData("action=GETCLASSLIST&school_id="+school_id+"&timetable_id="+class_id+"&year_id="+$("#teachertimetable_year_id").val());
 	classes = jQuery.parseJSON(classes);
 	//alert(classes);
 	$("#class_list").html("");
@@ -1246,7 +1286,7 @@ function getClassList(class_id)
 		$('<option></option>').val(0).html("Select Learner To View Time Table")
 	); 
 	$.each(classes, function(i, item) {
-		var name = item.access_id + " " + item.name + " " + item.surname;
+		var name = item.access_id + " " + item.surname + " " + item.name;
 		$('#class_list').append(
 			$('<option></option>').val(item.user_id).html(name)
 		); 
@@ -1265,8 +1305,7 @@ function getClassList(class_id)
 		$('#teacher_list').append(
 			$('<option></option>').val(item.user_id).html(name)
 		); 
-	});
-	
+	});	
 }
 
 function openWindow(url)

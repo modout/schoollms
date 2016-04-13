@@ -1,6 +1,7 @@
 <?php 
 global $data;
 include("db.inc");
+include("util.php");
 //var_dump($data);
 
 //include('data_db_mysqli.inc');
@@ -21,9 +22,10 @@ $timetable_items = null;
 $user_id = 1;
 $timetable_id = 0;
 $periods = array();
+$period_labels = array();
 // open database connection and select database
 //$link = mysql_connect('localhost', 'root', '');
-$db_conn = mysqli_connect($db_host, $db_user, $db_pwd,$db_name);
+//$db_conn = mysqli_connect($db_host, $db_user, $db_pwd,$db_name);
 //mysqli_select_db($db_name, $db_conn);
 
 // function executes SQL statement and returns result set as Array
@@ -50,6 +52,7 @@ function sqlQuery($sql) {
             $resultSet[$row[0]][] = $row;
         }
     }*/
+	//echo "<br/> $sql <br/><br/>";
 	$mysql_num = "";
 	if(function_exists("mysql_connect") )
 	{
@@ -58,7 +61,7 @@ function sqlQuery($sql) {
 	else{
 		$mysql_num = MYSQLI_NUM;
 	}
-	if(strpos(strtoupper($sql),"INSERT") > -1 or strpos(strtoupper($sql),"UPDATE") > -1)
+	if(strpos(strtoupper($sql),"INSERT") > -1 or strpos(strtoupper($sql),"UPDATE") > -1 or strpos(strtoupper($sql),"DELETE") > -1)
 	{
 		$data->execNonSql($sql);
 	}
@@ -68,14 +71,17 @@ function sqlQuery($sql) {
 		{
 			$resultSet[$row[0]][] = $row;
 		}
-	}	
+	}
+	
     // return result set
     return $resultSet;
 }
 
+
 function sqlEscapeString($string){
-    global $db_conn;
-    return mysqli_real_escape_string($db_conn, $string);
+    global $data;
+	return $data->sqlEscapeString($string);
+    //return mysqli_real_escape_string($db_conn, $string);
 }
 
 // commit transaction
@@ -238,6 +244,7 @@ function prepareTableView($user_id, $time_table_id,$user_type, $year_id){
 
                     case 4:
                         //echo "if ($teacher_id == $user_id) <br>";
+						alert("$teacher_id == $user_id ---  timetable_id|$timetable_id, timetable_day|$timetable_day, date_stamp|$date_stamp, period_label_id|$period_label_id, grade_id|$grade_id");
                         if ($teacher_id == $user_id){
                             $slot_details = items($timetable_id, $timetable_day, $date_stamp, $period_label_id, $grade_id, $class_id, $room_id, $subject_id, $teacher_id, $substitute_id, $user_type, $user_id); 
                         } else {
@@ -485,8 +492,14 @@ function periods ($school_id){
     
     //$periods = sqlQuery('select *  from schoollms_schema_userdata_school_timetable_period order by period_id');
     //echo "SCHOOL_ID $school_id";
-    
-    $period_labels = sqlQuery("select * from schoollms_schema_userdata_school_timetable_period_labels where school_id = $school_id order by period_label_id ASC");
+    $sql = "select l.* 
+		from schoollms_schema_userdata_school_timetable_period_labels l
+		join schoollms_schema_userdata_school_timetable_period p on p.period_label_id = l.period_label_id and l.school_id = p.school_id
+		where l.school_id = $school_id 
+		and week_day_id = 1
+		order by UNIX_TIMESTAMP(concat('2016-01-01',' ',period_start))  asc";
+    //$period_labels = sqlQuery("select * from schoollms_schema_userdata_school_timetable_period_labels where school_id = $school_id order by period_label_id ASC");
+	$period_labels = sqlQuery($sql);
     
     //var_dump($period_labels);
     
@@ -898,6 +911,7 @@ function get_timetable_slot_links($timetable_id, $date_stamp, $day_id, $period_l
         
         
         $q = "SELECT lesson_url,lesson_title FROM schoollms_schema_userdata_school_timetable_subject_lessons WHERE day_id = $day_id AND period_label_id = $period_label_id AND lesson_date = '$today_token1'";
+		alert($q);
 
         $result = sqlQuery($q);
 
@@ -940,7 +954,7 @@ function get_timetable_slot_links($timetable_id, $date_stamp, $day_id, $period_l
                    // }
                         
                     $passwd = "learn123";
-                    $url = "http://172.16.0.9/learnqa/local_timetable_schoollms_link.php";
+                    $url = "http://127.0.0.1:8081/learn/local_timetable_schoollms_link.php";
                     
                     foreach ($lessons as $lesson_url => $lesson_title) {
                         $pars = "action=open_link&q=$lesson_url&username=$username&passwd=$passwd";
@@ -952,7 +966,7 @@ function get_timetable_slot_links($timetable_id, $date_stamp, $day_id, $period_l
 
                 case 4:
                     $passwd = "teach123";
-                    $url = "http://172.16.0.9/teachqa/local_timetable_schoollms_link.php";
+                    $url = "http://127.0.0.1:8081/teach/local_timetable_schoollms_link.php";
                     $username="$name $surname";
                     
                     foreach ($lessons as $lesson_url => $lesson_title) {
@@ -1006,6 +1020,7 @@ function print_day($day, $row,$time_table_id,$user_type, $user_id, $year_id, $sc
 		$rs = sqlQuery("select concat(tbl_row,'_',tbl_col) as pos, timetabl_id, slot_code, slot_details
 						from schoollms_schema_userdata_school_timetable_view
 						where timetabl_id = $time_table_id");
+						
 		//unset($rs);				
 	}
 	
@@ -1015,12 +1030,19 @@ function print_day($day, $row,$time_table_id,$user_type, $user_id, $year_id, $sc
         $weekday = $day_tokens[1];
         $period_labels = sqlQuery('select *  from schoollms_schema_userdata_school_timetable_period_labels order by period_label_id');
         
-        $weekday_tokens = sqlQuery("SELECT * FROM schoollms_schema_userdata_school_timetable_weekdays WHERE week_day_label LIKE '%$weekday%' ");
-        $week_day_id = $weekday_tokens[0][0][0];
+		$weekday_tokens = sqlQuery("SELECT * FROM schoollms_schema_userdata_school_timetable_weekdays WHERE week_day_label LIKE '%$weekday%' ");
+		//print_r($weekday_tokens);
+		$index = 0;
+		foreach($weekday_tokens as $key=>$value)
+		{
+			$index = $key;
+		}
+		
+        $week_day_id = $weekday_tokens[$index][0][0];
         
         $periods = sqlQuery("SELECT * FROM schoollms_schema_userdata_school_timetable_period WHERE school_id = $school_id AND week_day_id = $week_day_id ORDER BY period_label_id");
 	
-	//var_dump($periods);
+	//print_r($periods);
 	print '<tr>';
 	print '<td class="mark dark">' . $day . '</td>';
 	// column loop starts from 1 because column 0 is for hours
@@ -1082,9 +1104,22 @@ function print_day($day, $row,$time_table_id,$user_type, $user_id, $year_id, $sc
                                         echo "RESULT $result <br> USER_TYPE $user_type <br>";
 				}
                                 
-                                $class = $elements[$i][2];
-                                $start = $periods[$col][0][4];
-				$end = $periods[$col][0][5];
+				$class = $elements[$i][2];
+				$start= "";
+				$end = "";
+				foreach($periods as $key=>$value)
+				{
+					//var_dump($periods);
+					//echo "<br/>";
+					$start = $periods[$key][0][3];
+					$end = $periods[$key][0][4];   
+					
+					break;					
+				}
+				$theperiod = $period_labels[$col ][0][2];
+				//echo "$theperiod";
+				//$start = $periods[$col][0][4];
+				//$end = $periods[$col][0][5];
                                 
 				//$class = substr($id, 0, 2); // class name is only first 2 letters from ID
 				//print "<div id=\"$id\" class=\"drag $class\"  onclick=\"viewTimeTableSlot('$result','$datas[0]')\">$name</div>";
@@ -1104,9 +1139,9 @@ function print_day($day, $row,$time_table_id,$user_type, $user_id, $year_id, $sc
 				$dclass = "";
 				for($i = 0;$i < strlen ($class1);$i++)
 				{
-                                        if ($class1[$i] == '<'){
-                                            break;
-                                        }
+					if ($class1[$i] == '<'){
+						break;
+					}
                                         
 					if(!empty(trim($class1[$i])))
 					{
@@ -1114,14 +1149,15 @@ function print_day($day, $row,$time_table_id,$user_type, $user_id, $year_id, $sc
 						$dclass .=$class1[$i];
 					}
 				}
-                                //$dclass_tokens = explode("<", $dclass1);
-                                //$dclass = $dclass_tokens[0];
-                                //echo "$class1 <br>\n";
+				//$dclass_tokens = explode("<", $dclass1);
+				//$dclass = $dclass_tokens[0];
+				//echo "$class1 <br>\n";
 				//$onclick = "viewTimeTableSlot('$result','$datas[0]','$class1','$start-$end~$day')";
 				//onclick=\"viewTimeTableSlot('$result','$datas[0]','$class1','$start-$end~$day')\"
 				//echo "$onclick  <br/>";
 				//echo "into endtehrswehhbfdsmhfj$class1"."gsdhjgfhsdmjfhdsjhfmdshgfhdsgfnhsgdfhngsdnfhgsdnfhvdsnbvfbsndbvfnsdbvfnsdbvfnsdbvfnsdbvfnbsdvfndsbvfndsvbn <br />";
-				print "<div id=\"$id\" class=\"drag $class\" onClick=\"viewTimeTableSlot('$result','$datas[0]','CLASS $dclass','$start-$end~$day')\" >$name</div>";
+				//alert("viewTimeTableSlot");
+				print "<div id=\"$id\" class=\"drag $class\" onClick=\"viewTimeTableSlot('$result','$datas[0]','CLASS $dclass','$start-$end~$day~$theperiod')\" >$name</div>";
 			}
 		}
 		// close table cell

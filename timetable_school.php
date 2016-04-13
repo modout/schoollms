@@ -3,6 +3,7 @@
 //include('data_db_mysqli.inc');
 //include('config_mysql_learn.php');
 include("db.inc");
+include("util.php");
 
 extract($_POST);
 extract($_GET);
@@ -113,7 +114,7 @@ $teachertimetable_year_id .= "</select>";
 <!DOCTYPE html PUBLIC>
 <html>
 	<head>
-		<meta name="author" content="Modise Makhetha"/>
+		<meta name="author" content="Siphiwo Dzingwe;Modise Makhetha"/>
 		<meta name="description" content="SchoolLMS Timetable Settings Page"/>
 		<meta name="viewport" content="width=device-width, user-scalable=no"/><!-- "position: fixed" fix for Android 2.2+ -->
 		<link rel="stylesheet" href="style.css" type="text/css" media="screen"/>
@@ -161,11 +162,12 @@ $teachertimetable_year_id .= "</select>";
 				var school_id = getUrlParameter("school_id");
 				if(school_id != null && school_id != undefined)
 				{
-					//alert(school_id);
+					
 					viewTimeTable();
 					getStep1Data();
 					getSchoolData(school_id);
 				}
+				//alert("aredf ");
 			
 				$('.numbersOnly').keyup(function () { 
 					this.value = this.value.replace(/[^0-9\.]/g,'');
@@ -274,9 +276,16 @@ $teachertimetable_year_id .= "</select>";
 				
 			});
 			
-			$("#timetable_id").on('change', function() {
+			$("#timetable_id").on('change', function() {	
+				
 				getTimetable($("#timetable_id").val());
 				getClassList($("#timetable_id").val());
+			});
+			
+			$("#class_list").on('change', function() {
+				//alert("We are here");
+				getTimetable($("#class_list").val());
+				//getClassList($("#timetable_id").val());
 			});
 			
 			$("#teacher_list").on('change', function() {
@@ -328,14 +337,14 @@ $teachertimetable_year_id .= "</select>";
 			  }); 
 			 
 
-			$("#class_list").searchable({
+			/*("#class_list").searchable({
 				maxListSize: 100,
 				maxMultiMatch: 100,
 				latency: $("#latency").val(),
 				exactMatch: false,
 				wildcards: true,
 				ignoreCase: true
-			});
+			});*/
 			 
 
 		});
@@ -369,6 +378,7 @@ $teachertimetable_year_id .= "</select>";
 			}
 			if($user_type == 4)
 			{
+				//
 				include_once("pages/teacher.php");
 			}
 			if($user_type == 5)
@@ -460,12 +470,12 @@ $teachertimetable_year_id .= "</select>";
                 </td>
             </tr>
             <tr>
-                <th>
+                <td>
                    Learner Average
-                </th>
-                <th>
+                </td>
+                <td>
                     <input type="text" id="learner_average" name="learner_average"  placeholder="Learner Average" />
-                </th>
+                </td>
             </tr>
             <tr>
                 <td>
@@ -588,53 +598,7 @@ $teachertimetable_year_id .= "</select>";
 		</table>
     </div>
 	
-	<div id="newTeacherDlg" class="easyui-dialog" style="width:520px;height:250px;padding:10px 20px"
-            closed="true" buttons="#dlg-buttons">
-        <div class="ftitle"><strong>Teacher Information</strong></div>
-        <form runat="server" id="frmSaveTeacher" name="frmSaveTeacher"  >
-			<table style="width: 100%" cellspacing=2 cellpadding=2 >   
-				<tr>
-					<td align="left" colspan=2>
-						<input type="hidden" id="user_id" name="user_id" />
-					</td>
-				</tr>			
-				<tr>
-					<td style="width: 40%">
-						 Teacher ID
-					</td>
-					<td align="left">
-						<input type="text" id="teacher_id" name="teacher_id"  placeholder="Teacher ID" />
-					</td>
-				</tr>
-				<tr>
-					<td style="width: 40%">
-						 Teacher Initials
-					</td>
-					<td align="left">
-						<input type="text" id="teacher_initials" name="teacher_initials"  placeholder="Teacher Initials" />
-					</td>
-				</tr>
-				<tr>
-					<td style="width: 40%">
-						 Teacher Surname
-					</td>
-					<td align="left">
-						<input type="text" id="teacher_surname" name="teacher_surname"  placeholder="Teacher Surname" />
-					</td>
-				</tr>
-			</table>
-			
-		</form>
-		<table width="80%">
-		<tr><td>
-				<button id="btnSaveTeacher" name="btnSaveTeacher" onClick="SaveNewTeacher()">Save</button>
-					</td>
-					<td>
-						<button id="btnSaveLearner" name="btnSaveLearner" onClick="$('#newTeacherDlg').dialog('close');">Cancel</button>
-					</td>
-				</tr>
-		</table>
-	</div>
+	
 		
 	</body>
 </html>

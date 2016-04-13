@@ -1,5 +1,5 @@
 <?php
-
+//include('util.php');
 include("db.inc");
 // old mysql extension (it has been deprecated as of PHP 5.5.0 and will be removed in the future)
 // define database host (99% chance you won't need to change this value)
@@ -53,7 +53,7 @@ function sqlQuery($sql) {
 	else{
 		$mysql_num = MYSQLI_NUM;
 	}
-	if(strpos(strtoupper($sql),"INSERT") > -1 or strpos(strtoupper($sql),"UPDATE") > -1)
+	if(strpos(strtoupper($sql),"INSERT") > -1 or strpos(strtoupper($sql),"UPDATE") > -1 or strpos(strtoupper($sql),"DELETE") > -1)
 	{
 		$data->execNonSql($sql);
 	}
@@ -2523,6 +2523,7 @@ function timetable_settings_save($school_id, $settings, $type){
             $timetable_slot_tokens = explode("|", $settings);
             var_dump($timetable_slot_tokens);
             foreach ($timetable_slot_tokens as $key => $token) {
+				echo "$$token <br/>";
                 $token_item = explode("=", $token);
                 switch ($token_item[0]) {
                     case 'subject_id':
@@ -2559,7 +2560,7 @@ function timetable_settings_save($school_id, $settings, $type){
                         $q = "SELECT timetable_type_item_id FROM schoollms_schema_userdata_school_timetable WHERE school_id = $school_id AND timetabl_id = $timetable_id AND timetable_type_id = 3";
                         $class_result = sqlQuery($q);
                         
-                        //echo "Q $q <br>";
+                        echo "QTF $q <br>";
                         if (!empty($class_result)) {
                             foreach ($class_result as $class_data) {
                                 $class_id = $class_data[0][0];
@@ -2568,7 +2569,7 @@ function timetable_settings_save($school_id, $settings, $type){
                         } else { 
                             $class_id = 0;
                         }
-                        //echo "CLASS ID $class_id <br>";
+                        //alert("CLASS ID $class_id <br>");
                         break;
                     
                     case 'day_id':
@@ -2591,8 +2592,9 @@ function timetable_settings_save($school_id, $settings, $type){
                         break;
                 }
             }
-            
-            if ($user_id !== 0){
+            //alert("user ID : $user_id");
+            if ($user_id != 0){
+				//alert("ek se");
                 //GET USER ROLE
                 $q = "SELECT * FROM schoollms_schema_userdata_access_profile WHERE user_id = $user_id";
                 $user_result = sqlQuery($q);
@@ -2614,7 +2616,7 @@ function timetable_settings_save($school_id, $settings, $type){
                                 break;
                             }
 
-                            //echo "LEARNER USER ID $user_id NAME $name SURNAME $surname <br>";
+                            echo "LEARNER USER ID $user_id NAME $name SURNAME $surname <br>";
                             //CHECK IF LEARNER HAS TIMETABLE
                             $q = "SELECT * FROM schoollms_schema_userdata_learner_timetable WHERE user_id = $user_id AND year_id = $year_id";
                             $learner_timetable = sqlQuery($q);
@@ -2652,18 +2654,18 @@ function timetable_settings_save($school_id, $settings, $type){
 
                             }
 
-                            //echo "LEARNER TIMETABLE ID $learner_timetable_id <br>";
+                            echo "LEARNER TIMETABLE ID $learner_timetable_id <br>";
                             //UPDATE LEARNER TIMETABLE SETTINGS
                             $sql = "SELECT * FROM schoollms_schema_userdata_school_timetable_items WHERE timetabl_id = $learner_timetable_id AND day_id = $day_id AND period_label_id = $period_label_id";
                             $timetable_settings = sqlQuery($sql);
 
                             if (!empty($timetable_settings)) {
-                                $sql = "UPDATE schoollms_schema_userdata_school_timetable_items SET grade_id = $grade_id AND class_id = $class_id AND room_id = $room_id AND subject_id = $subject_id AND teacher_id = $teacher_id AND substitute_id = 0 WHERE timetabl_id = $learner_timetable_id AND day_id = $day_id AND period_label_id = $period_label_id";
+                                $sql = "UPDATE schoollms_schema_userdata_school_timetable_items SET grade_id = $grade_id AND class_id = $class_id AND room_id = $room_id AND subject_id = $subject_id AND teacher_id = $teacher_id AND substitude_id = 0 WHERE timetabl_id = $learner_timetable_id AND day_id = $day_id AND period_label_id = $period_label_id";
                             } else {
                                 $sql = "INSERT INTO schoollms_schema_userdata_school_timetable_items VALUES ($learner_timetable_id, $day_id, $period_label_id, $grade_id, $class_id, $room_id, $subject_id, $teacher_id, 0)";
                             }
 
-                            //echo "LAST Q $sql <br>";
+                            echo "LAST Q $sql <br>";
 
                             $timetable_settings = sqlQuery($sql);
                             break;
@@ -2678,7 +2680,7 @@ function timetable_settings_save($school_id, $settings, $type){
                                 break;
                             }
 
-                            //echo "TEACHER USER ID $teacher_id NAME $name SURNAME $surname <br>";
+                            echo "TEACHER USER ID $teacher_id NAME $name SURNAME $surname <br>";
                             //CHECK IF TEACHER HAS TIMETABLE
                             $q = "SELECT * FROM schoollms_schema_userdata_teacher_timetable WHERE user_id = $teacher_id AND year_id = $year_id";
                             $teacher_timetable = sqlQuery($q);
@@ -2721,11 +2723,11 @@ function timetable_settings_save($school_id, $settings, $type){
                             $timetable_settings = sqlQuery($sql);
 
                             if (!empty($timetable_settings)) {
-                                $sql = "UPDATE schoollms_schema_userdata_school_timetable_items SET grade_id = $grade_id AND class_id = $class_id AND room_id = $room_id AND subject_id = $subject_id AND teacher_id = $teacher_id AND substitute_id = 0 WHERE timetabl_id = $teacher_timetable_id AND day_id = $day_id AND period_label_id = $period_label_id";
+                                $sql = "UPDATE schoollms_schema_userdata_school_timetable_items SET grade_id = $grade_id AND class_id = $class_id AND room_id = $room_id AND subject_id = $subject_id AND teacher_id = $teacher_id AND substitude_id = 0 WHERE timetabl_id = $teacher_timetable_id AND day_id = $day_id AND period_label_id = $period_label_id";
                             } else {
                                 $sql = "INSERT INTO schoollms_schema_userdata_school_timetable_items VALUES ($teacher_timetable_id, $day_id, $period_label_id, $grade_id, $class_id, $room_id, $subject_id, $teacher_id, 0)";
                             }
-                            //echo "TEACHER Q $sql <br>";
+                            echo "TEACHER Q $sql <br>";
                             $timetable_settings = sqlQuery($sql);
                             break;
 
@@ -2735,20 +2737,20 @@ function timetable_settings_save($school_id, $settings, $type){
                 }
                 
             } elseif ($class_id !== 0) {
-                
+                //alert("we are here $class_id");
                 $sql = "SELECT * FROM schoollms_schema_userdata_school_timetable_items WHERE timetabl_id = $timetable_id AND day_id = $day_id AND period_label_id = $period_label_id";
                 $timetable_settings = sqlQuery($sql);
 
-                //echo "Q $sql";
+                echo "Q $sql";
                 
                 //var_dump($timetable_settings);
                 
                 if (!empty($timetable_settings)) {
-                    $sql = "UPDATE schoollms_schema_userdata_school_timetable_items SET grade_id = $grade_id AND class_id = $class_id AND room_id = $room_id AND subject_id = $subject_id AND teacher_id = $teacher_id AND substitute_id = 0 WHERE timetabl_id = $timetable_id AND day_id = $day_id AND period_label_id = $period_label_id";
+                    $sql = "UPDATE schoollms_schema_userdata_school_timetable_items SET grade_id = $grade_id AND class_id = $class_id AND room_id = $room_id AND subject_id = $subject_id AND teacher_id = $teacher_id AND substitude_id = 0 WHERE timetabl_id = $timetable_id AND day_id = $day_id AND period_label_id = $period_label_id";
                 } else {
                     $sql = "INSERT INTO schoollms_schema_userdata_school_timetable_items VALUES ($timetable_id, $day_id, $period_label_id, $grade_id, $class_id, $room_id, $subject_id, $teacher_id, 0)";
                 }
-                //echo "Q $sql <br>";
+                echo "Q $sql <br>";
                 $timetable_settings = sqlQuery($sql);
                 
                 var_dump($timetable_settings);
@@ -2814,12 +2816,12 @@ function timetable_settings_save($school_id, $settings, $type){
                         $timetable_settings = sqlQuery($sql);
 
                         if (!empty($timetable_settings)) {
-                            $sql = "UPDATE schoollms_schema_userdata_school_timetable_items SET grade_id = $grade_id AND class_id = $class_id AND room_id = $room_id AND subject_id = $subject_id AND teacher_id = $teacher_id AND substitute_id = 0 WHERE timetabl_id = $learner_timetable_id AND day_id = $day_id AND period_label_id = $period_label_id";
+                            $sql = "UPDATE schoollms_schema_userdata_school_timetable_items SET grade_id = $grade_id AND class_id = $class_id AND room_id = $room_id AND subject_id = $subject_id AND teacher_id = $teacher_id AND substitude_id = 0 WHERE timetabl_id = $learner_timetable_id AND day_id = $day_id AND period_label_id = $period_label_id";
                         } else {
                             $sql = "INSERT INTO schoollms_schema_userdata_school_timetable_items VALUES ($learner_timetable_id, $day_id, $period_label_id, $grade_id, $class_id, $room_id, $subject_id, $teacher_id, 0)";
                         }
                         
-                        //echo "LAST Q $sql <br>";
+                        echo "LAST Q $sql <br>";
                         
                         $timetable_settings = sqlQuery($sql);
                         
@@ -2845,11 +2847,13 @@ function timetable_settings_save($school_id, $settings, $type){
                         //echo "TEACHER USER ID $teacher_id NAME $name SURNAME $surname <br>";
                         //CHECK IF TEACHER HAS TIMETABLE
                         $q = "SELECT * FROM schoollms_schema_userdata_teacher_timetable WHERE user_id = $teacher_id AND year_id = $year_id";
+						echo  "<hr/>$q<hr/>";
                         $teacher_timetable = sqlQuery($q);
-                        
+                        alert("WTF else");
                         if (!empty($teacher_timetable)){
                             foreach ($teacher_timetable as $teacher_timedata) {
                                 $teacher_timetable_id = $teacher_timedata[0][0];
+								alert("WTF 0");
                                 break;
                             }
                         } else {
@@ -2859,6 +2863,7 @@ function timetable_settings_save($school_id, $settings, $type){
                             if (!empty($teacher_result)) {
                                 foreach ($teacher_result as $teacher_data) {
                                     $teacher_timetable_id = $teacher_data[0][0];
+									alert("WTF 1");
                                     break;
                                 }
                             } else { 
@@ -2869,6 +2874,7 @@ function timetable_settings_save($school_id, $settings, $type){
                                 $teacher_result = sqlQuery($q);
                                 foreach ($teacher_result as $teacher_data) {
                                     $teacher_timetable_id = $teacher_data[0][0];
+									alert("WTF 2");
                                     break;
                                 }
                             }
@@ -2885,11 +2891,11 @@ function timetable_settings_save($school_id, $settings, $type){
                         $timetable_settings = sqlQuery($sql);
 
                         if (!empty($timetable_settings)) {
-                            $sql = "UPDATE schoollms_schema_userdata_school_timetable_items SET grade_id = $grade_id AND class_id = $class_id AND room_id = $room_id AND subject_id = $subject_id AND teacher_id = $teacher_id AND substitute_id = 0 WHERE timetabl_id = $teacher_timetable_id AND day_id = $day_id AND period_label_id = $period_label_id";
+                            $sql = "UPDATE schoollms_schema_userdata_school_timetable_items SET grade_id = $grade_id AND class_id = $class_id AND room_id = $room_id AND subject_id = $subject_id AND teacher_id = $teacher_id AND substitude_id = 0 WHERE timetabl_id = $teacher_timetable_id AND day_id = $day_id AND period_label_id = $period_label_id";
                         } else {
                             $sql = "INSERT INTO schoollms_schema_userdata_school_timetable_items VALUES ($teacher_timetable_id, $day_id, $period_label_id, $grade_id, $class_id, $room_id, $subject_id, $teacher_id, 0)";
                         }
-                        //echo "TEACHER Q $sql <br>";
+                        echo "TEACHER Q $sql <br>";
                         $timetable_settings = sqlQuery($sql);
                         
 //                    }

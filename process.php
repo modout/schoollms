@@ -216,6 +216,34 @@ if(strtoupper($action) == "GETCLASSES")
 	echo json_encode($result);
 }
 
+if(strtoupper($action) == "GETCLASSLIST")
+{
+    $q = "SELECT timetable_type_item_id FROM schoollms_schema_userdata_school_timetable WHERE school_id = $school_id AND timetabl_id = $timetable_id AND timetable_type_id = 3";
+    $data->execSQL($q);
+                        
+    while($row = $data->getRow())
+   {
+	  $class_id = $row->timetable_type_item_id;
+   }    
+    
+       
+   //echo "CLASS ID $class_id Q $q<br>";
+    
+    $sql = "select *
+   from schoollms_schema_userdata_learner_schooldetails sd
+   join schoollms_schema_userdata_access_profile p on p.user_id = sd.user_id
+   where sd.class_id = $class_id and year_id = case when $year_id = 'All' then year_id else $year_id  end order by p.surname asc";
+   $data->execSQL($sql);
+   $result = array();
+   while($row = $data->getRow())
+   {
+	   $result[] = $row;
+   }
+   
+   echo json_encode($result);
+   
+}
+
 
 if(strtoupper( $action) == "GETSUBJECTS" )
 {
@@ -274,6 +302,7 @@ if(strtoupper( $action) == "GETSLOTCLASSLIST" )
 	echo json_encode($result);
 }
 
+/*
 if(strtoupper( $action) == "TIMETABLESELECT" )
 {
 	$sql = "select *
@@ -319,7 +348,7 @@ if(strtoupper( $action) == "TIMETABLESELECT" )
 		{
 			$sql .= " and timetable_label like '%$timetable_label%'";
 
-		}*/
+		}
 		$sql .= " and timetable_label in $in";
 		$sql .= " order by timetable_label";
 	}	
@@ -327,13 +356,37 @@ if(strtoupper( $action) == "TIMETABLESELECT" )
 	//die();
 	//$result = array();
 	$data->execSQL($sql);
-	$result = array();
+	//echo $data->numrows;
+	//echo "<br/>";
+	$result1 = array();
+	$set = "";
 	while($row = $data->getRow())
 	{
-		$result[] = $row;
+		//var_dump($row);
+		//a "<hr/>";
+		foreach($result1 as $key=>$value)
+		{
+			if($value == $row)
+			{
+				continue;
+			}
+			else{
+				$result1[] = $row;
+			}
+		}
+		$set .= "{'timetabl_id':'$row->timetabl_id','school_id':'$row->school_id','timetable_type_id':'$row->timetable_type_id',
+			'timetable_type_item_id':'$row->timetable_type_item_id','timetable_label':'$row->timetable_label'} ,";
+		//$result[] = $row;
 	}
-	echo json_encode($result);
-}
+	//var_dump($result);
+	//var_dump($result);
+	//die();
+	//echo json_encode($result1);
+	$set = substr($set,0,strlen($set)-1);
+	echo "[$set]";
+	die();
+	
+}*/
 
 if(strtoupper($action) == "GETGRADES")
 {
@@ -342,7 +395,17 @@ if(strtoupper($action) == "GETGRADES")
 	$result = array();
 	while($row = $data->getRow())
 	{
-		$result[] = $row;
+		foreach($result as $key=>$value)
+		{
+			if($value == $row)
+			{
+				continue;
+			}
+			else{
+				$result[] = $row;
+			}
+		}
+		
 	}
 	echo json_encode($result);
 }
@@ -468,22 +531,70 @@ if(strtoupper($action) == "GETSUBJECTTEACHER")
 	
 }
 
-if(strtoupper($action) == "GETCLASSLIST")
+if(strtoupper( $action) == "TIMETABLESELECT" )
 {
 	$sql = "select *
-   from schoollms_schema_userdata_learner_schooldetails sd
-   join schoollms_schema_userdata_access_profile p on p.user_id = sd.user_id
-   where sd.class_id = $class_id and year_id = case when $year_id = 'All' then year_id else $year_id  end ";
-   echo $sql;
-   $data->execSQL($sql);
-   $result = array();
-   while($row = $data->getRow())
-   {
-	   $result[] = $row;
-   }
-   
-   echo json_encode($result);   
+	from schoollms_schema_userdata_timetable_settings
+	where school_id = $school_id";
+	
+	$data->execSQL($sql);
+	$settings = "";
+	if($row=$data->getRow())
+	{
+		$settings = $row->settings;
+	}		
+	
+	//echo "settings : $settings <br/>";
+	
+	$settarray =explodetoAssoc($settings);
+	
+	$sql = "select *, replace(grade_title,'Grade','Class') theclass
+		from schoollms_schema_userdata_school_grades
+		where grade_id = '$timetable_label'";
+	$classname = "";
+	$data->execSQL($sql);	
+	if($row=$data->getRow())
+	{		
+		$classname = $row->theclass;
+	}		
+	//echo $classname;
+	
+	$set = explode(",",$settarray["classletters"]);
+	$in = "(''";
+	foreach($set as $value)
+	{
+		//$val = str_replace(" ","","$classname$value");
+		$val = str_replace("<br>","",trim("$classname$value"));
+		$val = str_replace("\n","",$val );
+		$val = str_replace("\r","",$val );
+		$in .= ",'$val'";
+	}
+	$in .= ")";
+	
+	
+	$sql = "select * from schoollms_schema_userdata_school_timetable where school_id = $school_id ";
+	if(isset($timetable_label))
+	{
+		/*if($timetable_label != 0)
+		{
+			$sql .= " and timetable_label like '%$timetable_label%'";
+
+		}*/
+		$sql .= " and timetable_label in $in";
+		$sql .= " order by timetable_label";
+	}	
+	//echo $settarray["classletters"]."<hr/>$sql  <hr/>";
+	//die();
+	//$result = array();
+	$data->execSQL($sql);
+	$result = array();
+	while($row = $data->getRow())
+	{
+		$result[] = $row;
+	}
+	echo json_encode($result);
 }
+
 
 if(strtoupper($action) == "GETIMAGE")
 {
@@ -700,11 +811,11 @@ function explodetoAssoc($variable,$explodeby = "|",$assocdelimiter= "=")
 { 
     //echo "$variable is the variable ";
 	$list = explode($explodeby,$variable); 
-	
+	$theresult = array();
 	foreach($list as $key=>$value)
 	{
 		$data = explode($assocdelimiter,$value); 
-		$result[$data[0]] = $data[1]; 
+		$theresult[$data[0]] = $data[1]; 
 	}
 	/*$result = array(); 
 	for($i=0;$i< count($list);$i++) 
@@ -715,7 +826,7 @@ function explodetoAssoc($variable,$explodeby = "|",$assocdelimiter= "=")
 	} */
 	//var_dump($result["classletters"]);
 	//echo "<hr/>";
-	return $result; 
+	return $theresult; 
 }
 
 

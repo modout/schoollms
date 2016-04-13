@@ -1,12 +1,9 @@
 <?php
 
-if (!isset($_SERVER["HTTP_HOST"])) {
-  parse_str($argv[1], $_GET);
-  parse_str($argv[1], $_POST);
-}
 
-extract($_GET);
+
 extract($_POST);
+extract($_GET);
 
 //var_dump($_GET);
 // include config with database definition
@@ -20,12 +17,27 @@ if(isset($db))
 }
 //$save_type = isset($_REQUEST['save_type']) ? $_REQUEST['save_type'] : 0;
 
+
+
 switch ($save_type) {
 
     case 'save_timetable_slot':
+	var_dump($_GET);
+	echo $_GET['timetable_id'];
+	echo "<hr/>";
         //subject_id=2&teacher_id=1489&day_id=3&start_time=8:55&endtime=9:50&timetable_id=35&year_id=3&grade_id=9&room_id=24&action=save_timetable_slot
-        $settings_string = "subject_id=$subject_id|timetable_id=$timetable_id|teacher_id=$teacher_id|day_id=$day_id|period_start=$start_time|period_end=$endtime|grade_id=$grade_id|year_id=$year_id|grade_id=$grade_id|room_id=$room_id";
-        timetable_settings_save($school_id, $settings_string, 'timetable_slot');
+        //$settings_string = "subject_id=$subject_id|timetable_id=$timetable_id|teacher_id=$teacher_id|day_id=$day_id|period_label_id=$period_label_id|grade_id=$grade_id|year_id=$year_id|grade_id=$grade_id|room_id=$room_id";
+        $str = "";
+		foreach($_GET as $key=> $value)
+		{
+			$str .= "$key=$value|";
+		}
+		$str = substr($str,0,strlen($str)-1);
+
+		//echo "$str";
+		$settings_string = $str;
+		echo "$settings_string <br/>";
+		timetable_settings_save($school_id, $settings_string, 'timetable_slot');
         break;
     
     case 'save_general_timetable_settings':
@@ -51,7 +63,7 @@ switch ($save_type) {
     case 'publish_lesson':
         $q = "SELECT subject_id FROM schoollms_schema_userdata_school_subjects WHERE subject_title = '$subject'";
       
-        //echo "Q $q <br>\n";
+        echo "Q $q <br>\n";
         
         $result = sqlQuery($q);
         
@@ -59,10 +71,11 @@ switch ($save_type) {
             $subject_id = $value[0][0];
             break;
         }
+        echo "<hr/>$subject_id<hr/>";
+		
+        $q = "SELECT class_id FROM schoollms_schema_userdata_school_classes WHERE class_label LIKE '%$class%' and school_id = $school_id and year_id = $year_id";
         
-        $q = "SELECT class_id FROM schoollms_schema_userdata_school_classes WHERE class_label LIKE '%$class%'";
-        
-        //echo "Q $q <br>\n";
+        echo "<hr/> $q <hr/>";
         
         $result = sqlQuery($q);
         
@@ -76,18 +89,39 @@ switch ($save_type) {
         $start_time = $time_tokens[0];
         
         $end_time = $time_tokens[1];
-        
-        $q = "SELECT period_id FROM schoollms_schema_userdata_school_timetable_period WHERE period_start = '$start_time' AND period_end = '$end_time'";
+		
+		  $q = "SELECT week_day_id FROM schoollms_schema_userdata_school_timetable_weekdays WHERE week_day_label like '%$week_day%'";
         
         //echo "Q $q <br>\n";
         
         $result = sqlQuery($q);
         
+		            $week_day_id = "";
+        foreach ($result as $key => $value) {
+            $week_day_id = $value[0][0];
+            break;
+        }
+        $date = explode("~",$date);
+		
+        $q = "SELECT period_label_id FROM schoollms_schema_userdata_school_timetable_period WHERE period_start = '$start_time' AND period_end = '$end_time' and school_id = $school_id and week_day_id = $week_day_id";
+		$q = "select pl.period_label_id
+			from schoollms_schema_userdata_school_timetable_period ls
+			join schoollms_schema_userdata_school_timetable_period_labels pl on pl.period_label_id = ls.period_label_id
+			where ls.school_id =  $school_id
+			and pl.period_label =  '$date[1]'
+			and week_day_id = $week_day_id";
+        
+        echo "Q $q <br>\n";
+        
+        $result = sqlQuery($q);
+        $period_id ="";
         foreach ($result as $key => $value) {
             $period_id = $value[0][0];
             break;
         }
-        
+		
+		
+        echo  $day;
         $q = "SELECT day_id FROM schoollms_schema_userdata_school_timetable_days WHERE day_label = '$day'";
         
         //echo "Q $q <br>\n";
@@ -99,9 +133,9 @@ switch ($save_type) {
             break;
         }
         
-        $q = "INSERT INTO schoollms_schema_userdata_school_timetable_subject_lessons VALUES ($day_id, $period_id, $class_id, $subject_id, '$date', '$lessonurl', '$lesson')";
+        $q = "INSERT INTO schoollms_schema_userdata_school_timetable_subject_lessons VALUES ($day_id, $period_id, $class_id, $subject_id, '$date[0]', '$lessonurl', '$lesson')";
         
-        //echo "Q $q <br>\n";
+        echo "Q $q <br>\n";
         
         $result = sqlQuery($q);
         break;
@@ -167,7 +201,7 @@ switch ($save_type) {
                 break;
             }
 
-            $url = "http://172.16.0.9/teachdev/local_timetable_schoollms_link.php";
+            $url = "http://127.0.0.1:8081/teach/local_timetable_schoollms_link.php";
             $pars = "action=save_new_subject&username=System Admin&passwd=$0W3t0&subject_name=$subject_name&grade_no=$grade_id";
 
             $contents = do_post_request($url,$pars);
